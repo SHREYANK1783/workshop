@@ -1,7 +1,7 @@
-import { eq, asc } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
-import type { Game } from '../types/game';
+import type { Category, Game, Publisher } from '../types/game';
 
 const gameSelection = {
     id: games.id,
@@ -50,19 +50,94 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
-/** All games ordered by title. */
+/**
+ * Returns all games in title order.
+ *
+ * @param db Drizzle database client used to query games and their relations.
+ * @returns All games mapped to the application-facing type.
+ */
 export async function getAllGames(db: Database): Promise<Game[]> {
-    const rows = await baseGamesQuery(db).orderBy(asc(games.title));
+    return getFilteredGames(db, [], null);
+}
+
+/**
+ * Returns games matching the selected category and publisher filters.
+ *
+ * Multiple category IDs are combined with OR semantics; the publisher filter
+ * is then combined with the category predicate using AND semantics.
+ *
+ * @param db Drizzle database client used to query games and their relations.
+ * @param categoryIds Category IDs to include, or an empty array for all categories.
+ * @param publisherId Publisher ID to include, or null for all publishers.
+ * @returns Matching games mapped to the application-facing type in title order.
+ */
+export async function getFilteredGames(
+    db: Database,
+    categoryIds: number[],
+    publisherId: number | null,
+): Promise<Game[]> {
+    const filters = [];
+
+    if (categoryIds.length > 0) {
+        filters.push(inArray(games.categoryId, categoryIds));
+    }
+
+    if (publisherId !== null) {
+        filters.push(eq(games.publisherId, publisherId));
+    }
+
+    const query = baseGamesQuery(db);
+    const rows = filters.length > 0
+        ? await query.where(and(...filters)).orderBy(asc(games.title))
+        : await query.orderBy(asc(games.title));
+
     return rows.map(mapGame);
 }
 
-/** All game ids ordered by title. */
+/**
+ * Returns all categories in alphabetical order for filter controls.
+ *
+ * @param db Drizzle database client used to query categories.
+ * @returns Categories mapped to the application-facing type.
+ */
+export async function getAllCategories(db: Database): Promise<Category[]> {
+    return db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .orderBy(asc(categories.name));
+}
+
+/**
+ * Returns all publishers in alphabetical order for filter controls.
+ *
+ * @param db Drizzle database client used to query publishers.
+ * @returns Publishers mapped to the application-facing type.
+ */
+export async function getAllPublishers(db: Database): Promise<Publisher[]> {
+    return db
+        .select({ id: publishers.id, name: publishers.name })
+        .from(publishers)
+        .orderBy(asc(publishers.name));
+}
+
+/**
+ * Returns all game IDs in title order for dynamic route generation.
+ *
+ * @param db Drizzle database client used to query games.
+ * @returns Game IDs ordered by their titles.
+ */
 export async function getAllGameIds(db: Database): Promise<number[]> {
     const rows = await db.select({ id: games.id }).from(games).orderBy(asc(games.title));
     return rows.map((row) => row.id);
 }
 
-/** A single game by id, or null when it does not exist. */
+/**
+ * Returns one game by ID.
+ *
+ * @param db Drizzle database client used to query the game and its relations.
+ * @param id Numeric game ID to look up.
+ * @returns The matching game, or null when no game has that ID.
+ */
 export async function getGameById(db: Database, id: number): Promise<Game | null> {
     const row = await baseGamesQuery(db).where(eq(games.id, id)).get();
     return row ? mapGame(row) : null;

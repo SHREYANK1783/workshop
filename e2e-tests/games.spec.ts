@@ -24,6 +24,50 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category and preserve the selection in the URL', async ({ page }) => {
+    await page.goto('/');
+
+    await test.step('Select the Strategy category', async () => {
+      await page.getByRole('checkbox', { name: 'Strategy' }).check();
+    });
+
+    await test.step('Verify filtered results and URL state', async () => {
+      await expect(page).toHaveURL(/category=\d+/);
+      await expect(page.getByTestId('filter-result-count')).toHaveText('Showing 4 of 21 games');
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(4);
+      await expect(page.getByRole('checkbox', { name: 'Strategy' })).toBeChecked();
+    });
+  });
+
+  test('should combine category and publisher filters', async ({ page }) => {
+    await page.goto('/');
+
+    await test.step('Select category and publisher filters', async () => {
+      await page.getByRole('checkbox', { name: 'Strategy' }).check();
+      await page.getByTestId('publisher-filter').selectOption({ label: 'CodeForge Studios' });
+    });
+
+    await test.step('Verify only matching games remain', async () => {
+      await expect(page).toHaveURL(/category=\d+.*publisher=\d+|publisher=\d+.*category=\d+/);
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(1);
+      await expect(page.getByTestId('filter-result-count')).toHaveText('Showing 1 of 21 games');
+    });
+  });
+
+  test('should clear all active filters', async ({ page }) => {
+    await page.goto('/?category=1&publisher=1');
+
+    await test.step('Clear filters', async () => {
+      await page.getByTestId('reset-game-filters').click();
+    });
+
+    await test.step('Verify the full catalog is restored', async () => {
+      await expect(page).toHaveURL('/');
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(21);
+      await expect(page.getByTestId('filter-result-count')).toHaveText('Showing 21 of 21 games');
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
