@@ -14,6 +14,12 @@ This is a crowdfunding platform for games with a developer theme. The applicatio
 
 ## Code standards
 
+### Documentation and comments
+
+- Follow [`coding-standards.instructions.md`](instructions/coding-standards.instructions.md) for repository-wide TypeScript, TSDoc/JSDoc, Astro props, comment, and formatting conventions.
+- Comments should explain intent, constraints, or non-obvious decisions — never restate what the code already says.
+- Keep comments current with the code they describe.
+
 ### Required Before Each Commit
 
 #### Testing guidelines
@@ -35,18 +41,21 @@ This is a crowdfunding platform for games with a developer theme. The applicatio
 ### Code formatting requirements
 
 - Use TypeScript with explicit types for function parameters and return values, especially in the data layer (`db/`, `src/lib/`)
+- Use the documented TypeScript formatting conventions and rely on ESLint for enforceable type-safety rules.
 - Frontend code (TypeScript, Astro) must pass ESLint checks (`npm run lint`)
 
 ### Data Layer Patterns (Drizzle + Node SQLite)
 
 - Define tables in `db/schema.ts`; manage schema changes with drizzle-kit migrations - see `drizzle.instructions.md`
 - Keep data-access helpers in `src/lib/` with an **injectable `db`** argument so they're testable
+- Add TSDoc/JSDoc to every exported function in `db/` and `src/lib/`, documenting its purpose, parameters, injectable `db` arguments, and return value
 - Keep CSV/seed logic as pure functions in `db/transforms.ts`
 - Seed-derived values must be deterministic (no `Math.random`) so static builds are reproducible
 
 ### Astro Patterns
 
 - **Astro Pages/Components**: routing, layouts, content, and components are all `.astro` - see `astro.instructions.md`
+- Every reusable Astro component must document its `Props` interface and non-obvious prop behavior
 - Query data directly in page frontmatter via the `src/lib/` helpers (build-time, static output)
 - Dynamic routes use `getStaticPaths()` + `export const prerender = true`
 - Provide a branded `404.astro` (unknown routes are real 404s under static output)

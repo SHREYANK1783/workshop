@@ -11,6 +11,8 @@ Astro handles everything in the UI: pages, layouts, components, routing, and con
 
 ### Component Structure
 
+Reusable components must declare a `Props` interface in frontmatter. Keep the interface self-explanatory and document non-obvious props or behavior with concise TSDoc comments. See [`coding-standards.instructions.md`](coding-standards.instructions.md) for the repository-wide comment and documentation conventions.
+
 ```astro
 ---
 // Frontmatter: runs at build time (static output)
@@ -20,6 +22,7 @@ import { getDatabase } from '../lib/db';
 import { getAllGames } from '../lib/games';
 
 interface Props {
+  /** Text displayed in the document title and page heading. */
   title: string;
 }
 
